@@ -1,5 +1,7 @@
 [build]
-  publish = "."
+  # Only the static site is published; function source and dependencies stay private
+  publish = "public"
 
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
