@@ -1,25 +1,32 @@
-const OpenAI = require("openai");
+import OpenAI from "openai";
 
-exports.handler = async (event) => {
+const jsonResponse = (body, status = 200) =>
+    new Response(JSON.stringify(body), {
+        status,
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+export default async (req) => {
     try {
-        if (event.httpMethod !== "POST") {
-            return {
-                statusCode: 405,
-                body: JSON.stringify({
-                    error: "Método não permitido."
-                })
-            };
+        if (req.method !== "POST") {
+            return jsonResponse({ error: "Método não permitido." }, 405);
         }
 
-        const { message } = JSON.parse(event.body);
+        const { message } = await req.json().catch(() => ({}));
 
         if (!message) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({
-                    error: "Mensagem vazia."
-                })
-            };
+            return jsonResponse({ error: "Mensagem vazia." }, 400);
+        }
+
+        if (!process.env.OPENAI_API_KEY) {
+            console.error("OPENAI_API_KEY não está configurada.");
+
+            return jsonResponse(
+                { error: "A IA não está configurada no servidor." },
+                500
+            );
         }
 
         const openai = new OpenAI({
@@ -35,24 +42,14 @@ exports.handler = async (event) => {
             input: message
         });
 
-        return {
-            statusCode: 200,
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                response: response.output_text
-            })
-        };
+        return jsonResponse({ response: response.output_text });
 
     } catch (error) {
         console.error("Erro:", error);
 
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: "Não foi possível conversar com a IA."
-            })
-        };
+        return jsonResponse(
+            { error: "Não foi possível conversar com a IA." },
+            500
+        );
     }
 };
